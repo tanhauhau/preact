@@ -10,7 +10,7 @@
   "source": "src/index.js",
   "types": "src/index.d.ts",
   "license": "MIT",
-  "mangle": {
+  "_mangle": {
     "regex": "^_"
   },
   "peerDependencies": {

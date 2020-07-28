@@ -194,6 +194,7 @@ export function diff(
 			c._vnode = newVNode;
 			c._parentDom = parentDom;
 
+			console.log('----diff.render', c.constructor.dislayName || c.constructor.name)
 			tmp = c.render(c.props, c.state, c.context);
 
 			// Handle setState called in render, see #2553

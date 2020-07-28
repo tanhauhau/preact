@@ -30,6 +30,7 @@ export function _catchError(error, vnode) {
 				}
 
 				if (hasCaught)
+					console.log('hasCaught', 'enqueue');
 					return enqueueRender((component._pendingError = component));
 			} catch (e) {
 				error = e;

@@ -27,12 +27,22 @@ function detachedClone(vnode) {
 	return vnode;
 }
 
+function attachingClone(vnode) {
+	// if (vnode) {
+	// 	vnode = assign({}, vnode);
+	// 	vnode._children = vnode._children && vnode._children.map(attachingClone);
+	// }
+	return vnode;
+}
+
+
 // having custom inheritance instead of a class here saves a lot of bytes
 export function Suspense() {
 	// we do not call super here to golf some bytes...
 	this._pendingSuspensionCount = 0;
 	this._suspenders = null;
 	this._detachOnNextRender = null;
+	this._attachOnNextRender = null;
 }
 
 // Things we do here to save some bytes but are not proper JS inheritance:
@@ -47,7 +57,11 @@ Suspense.prototype = new Component();
 Suspense.prototype._childDidSuspend = function(promise, suspendingComponent) {
 	/** @type {import('./internal').SuspenseComponent} */
 	const c = this;
-
+	console.log(
+		'suspend',
+		suspendingComponent.constructor.displayName ||
+			suspendingComponent.constructor.name
+	);
 	if (c._suspenders == null) {
 		c._suspenders = [];
 	}
@@ -57,6 +71,7 @@ Suspense.prototype._childDidSuspend = function(promise, suspendingComponent) {
 
 	let resolved = false;
 	const onResolved = () => {
+		debugger;
 		if (resolved) return;
 
 		resolved = true;
@@ -79,31 +94,52 @@ Suspense.prototype._childDidSuspend = function(promise, suspendingComponent) {
 	};
 
 	const onSuspensionComplete = () => {
+		debugger;
 		if (!--c._pendingSuspensionCount) {
-			c._vnode._children[0] = c.state._suspended;
+			c._vnode._children[0] = attachingClone(c.state._suspended);
 			c.setState({ _suspended: (c._detachOnNextRender = null) });
 
 			let suspended;
 			while ((suspended = c._suspenders.pop())) {
 				suspended.forceUpdate();
 			}
+
+			// c._vnode._children[0] = _;
+			// console.log('onSuspensionComplete', [...c._vnode._children[0]._children]);
+			// suspendingComponent.componentWillUnmount = suspendingComponent._suspendedComponentWillUnmount;
 		}
 	};
 
 	if (!c._pendingSuspensionCount++) {
+		console.log([...c._vnode._children[0]._children]);
+		debugger;
 		c.setState({ _suspended: (c._detachOnNextRender = c._vnode._children[0]) });
 	}
 	promise.then(onResolved, onResolved);
 };
 
-Suspense.prototype.render = function(props, state) {
+Suspense.prototype.render = function (props, state) {
+	debugger;
 	if (this._detachOnNextRender) {
+		console.log('!!');
 		// When the Suspense's _vnode was created by a call to createVNode
 		// (i.e. due to a setState further up in the tree)
 		// it's _children prop is null, in this case we "forget" about the parked vnodes to detach
-		if (this._vnode._children)
+		if (this._vnode._children) {
 			this._vnode._children[0] = detachedClone(this._detachOnNextRender);
+		}
 		this._detachOnNextRender = null;
+	}
+
+	if (this._attachOnNextRender) {
+		if (this._vnode._children) {
+			this._vnode._children[0] = this._attachOnNextRender;
+		}
+		this._attachOnNextRender = null;
+	}
+
+	if (this._vnode && this._vnode._children) {
+		console.log({ ...this._vnode._children[0] });
 	}
 
 	return [

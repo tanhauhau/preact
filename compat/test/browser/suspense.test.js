@@ -1316,6 +1316,167 @@ describe('suspense', () => {
 		expect(scratch.innerHTML).to.eql(`<div>conditional hide</div>`);
 	});
 
+	it.only('should allow suspended multiple times', async () => {
+		const [Suspender1, suspend1] = createSuspender(() => (
+			<div>Suspender 1</div>
+		));
+		const [Suspender2, suspend2] = createSuspender(() => (
+			<div>Suspender 2</div>
+		));
+
+		let hide, resolve;
+
+		class Conditional extends Component {
+			constructor(props) {
+				super(props);
+				this.state = { show: true };
+
+				hide = () => {
+					this.setState({ show: false });
+				};
+			}
+
+			render(props, { show }) {
+				return (
+					<div>
+						conditional {show ? 'show' : 'hide'}
+						{show && (
+							<Suspense fallback="Suspended">
+								<Suspender1 />
+								<Suspender2 />
+							</Suspense>
+						)}
+					</div>
+				);
+			}
+		}
+
+		render(<Conditional />, scratch);
+		console.log('-------------1');
+		expect(scratch.innerHTML).to.eql(
+			'<div>conditional show<div>Suspender 1</div><div>Suspender 2</div></div>'
+		);
+
+		console.log('-------------2');
+		resolve = suspend1()[0];
+		rerender();
+		expect(scratch.innerHTML).to.eql('<div>conditional showSuspended</div>');
+
+		console.log('-------------3');
+		await resolve(() => <div>Done 1</div>);
+		rerender();
+		expect(scratch.innerHTML).to.eql(
+			'<div>conditional show<div>Done 1</div><div>Suspender 2</div></div>'
+		);
+
+		console.log('-------------4');
+		resolve = suspend2()[0];
+		rerender();
+		expect(scratch.innerHTML).to.eql('<div>conditional showSuspended</div>');
+
+		// console.log('-------------5');
+		// await resolve(() => <div>Done 2</div>);
+		// rerender();
+		// expect(scratch.innerHTML).to.eql(
+		// 	'<div>conditional show<div><div>Done 1</div><div>Done 2</div></div></div>'
+		// );
+	});
+
+	xit('should support updating state while suspended', () => {
+		const [Suspender, suspend] = createSuspender(() => <div>Suspender</div>);
+
+		let increment;
+
+		class Updater extends Component {
+			constructor(props) {
+				super(props);
+				this.state = { i: 0 };
+
+				increment = () => {
+					this.setState(({ i }) => ({ i: i + 1 }));
+				};
+			}
+
+			render(props, { i }) {
+				return (
+					<div>
+						i: {i}
+						<Suspender />
+					</div>
+				);
+			}
+		}
+
+		render(
+			<Suspense fallback={<div>Suspended...</div>}>
+				<Updater />
+			</Suspense>,
+			scratch
+		);
+
+		expect(scratch.innerHTML).to.eql(`<div>i: 0<div>Suspender</div></div>`);
+		expect(Suspender.prototype.render).to.have.been.calledOnce;
+
+		const [resolve] = suspend();
+		rerender();
+
+		expect(scratch.innerHTML).to.eql(`<div>Suspended...</div>`);
+
+		increment();
+		rerender();
+
+		expect(scratch.innerHTML).to.eql(`<div>Suspended...</div>`);
+
+		// return resolve().then(() => {
+		// 	rerender();
+		// 	expect(scratch.innerHTML).to.equal(`<div>i: 1<div>Suspender</div></div>`);
+		// });
+	});
+
+	xit('should allow setState of suspended component', () => {
+		let update;
+		function App() {
+			return (
+				<Suspense>
+					<Child />
+				</Suspense>
+			);
+		}
+
+		function Child() {
+			const [state, setState] = useState();
+			update = setState;
+
+			return;
+		}
+
+		// TODO: expect(scratch.innerHTML).to.eql(`<div>conditional show<div>Suspended...</div></div>`);
+
+		// toggleShow(false);
+		// rerender();
+
+		// toggleShow(true);
+		// rerender();
+
+		// expect(scratch.innerHTML).to.eql(`<div>conditional show<div>Suspended...</div></div>`);
+
+		let prevResolve = resolve;
+		setState({ a: 1 });
+		rerender();
+		console.log(scratch.innerHTML);
+		prevResolve('1');
+		rerender();
+
+		console.log(scratch.innerHTML);
+		resolve('2');
+		rerender();
+
+		console.log(scratch.innerHTML);
+		toggleShow(false);
+		rerender();
+		expect(scratch.innerHTML).to.eql(`<div>conditional hide</div>`);
+	});
+
 	it('should call componentWillUnmount on a suspended component', () => {
 		const cWUSpy = sinon.spy();
 

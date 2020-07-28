@@ -4,15 +4,15 @@ module.exports = function(api) {
 	const minify = String(process.env.MINIFY) === 'true';
 
 	const rename = {};
-	const mangle = require('./mangle.json');
-	for (let prop in mangle.props.props) {
-		let name = prop;
-		if (name[0] === '$') {
-			name = name.slice(1);
-		}
+	// const mangle = require('./mangle.json');
+	// for (let prop in mangle.props.props) {
+	// 	let name = prop;
+	// 	if (name[0] === '$') {
+	// 		name = name.slice(1);
+	// 	}
 
-		rename[name] = mangle.props.props[prop];
-	}
+	// 	rename[name] = mangle.props.props[prop];
+	// }
 
 	return {
 		presets: [
@@ -31,7 +31,7 @@ module.exports = function(api) {
 			'@babel/plugin-proposal-object-rest-spread',
 			'@babel/plugin-transform-react-jsx',
 			'babel-plugin-transform-async-to-promises',
-			['babel-plugin-transform-rename-properties', { rename }]
+			// ['babel-plugin-transform-rename-properties', { rename }]
 		],
 		include: ['**/src/**/*.js', '**/test/**/*.js'],
 		overrides: [
