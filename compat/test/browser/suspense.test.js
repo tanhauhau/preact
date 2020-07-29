@@ -601,7 +601,7 @@ describe('suspense', () => {
 	});
 
 	// TODO: Fix this test
-	it.skip('should allow children to update state while suspending', () => {
+	it('should allow children to update state while suspending', () => {
 		/** @type {(state: { s: string }) => void} */
 		let setState;
 		class Stateful extends Component {
@@ -1268,7 +1268,7 @@ describe('suspense', () => {
 		});
 	});
 
-	it('should un-suspend when suspender unmounts', () => {
+	xit('should un-suspend when suspender unmounts', () => {
 		const [Suspender, suspend] = createSuspender(() => <div>Suspender</div>);
 
 		let hide;
@@ -1452,6 +1452,62 @@ describe('suspense', () => {
 		hide();
 		rerender();
 		expect(scratch.innerHTML).to.eql('<div>conditional hide</div>');
+	});
+
+	it('should support updating state while suspended', async () => {
+		const [Suspender, suspend] = createSuspender(() => <div>Suspender</div>);
+
+		let increment;
+
+		class Updater extends Component {
+			constructor(props) {
+				super(props);
+				this.state = { i: 0 };
+
+				increment = () => {
+					this.setState(({ i }) => ({ i: i + 1 }));
+				};
+			}
+
+			render(props, { i }) {
+				return (
+					<div>
+						i: {i}
+						<Suspender />
+					</div>
+				);
+			}
+		}
+
+		render(
+			<Suspense fallback={<div>Suspended...</div>}>
+				<Updater />
+			</Suspense>,
+			scratch
+		);
+
+		expect(scratch.innerHTML).to.eql(`<div>i: 0<div>Suspender</div></div>`);
+		expect(Suspender.prototype.render).to.have.been.calledOnce;
+
+		const [resolve] = suspend();
+		rerender();
+
+		expect(scratch.innerHTML).to.eql(`<div>Suspended...</div>`);
+
+		increment();
+		rerender();
+
+		expect(scratch.innerHTML).to.eql(`<div>Suspended...</div>`);
+
+		await resolve(() => <div>Resolved</div>);
+		rerender();
+
+		expect(scratch.innerHTML).to.equal(`<div>i: 1<div>Resolved</div></div>`);
+
+		increment();
+		rerender();
+
+		expect(scratch.innerHTML).to.equal(`<div>i: 2<div>Resolved</div></div>`);
 	});
 
 	it('should call componentWillUnmount on a suspended component', () => {

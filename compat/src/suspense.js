@@ -22,10 +22,21 @@ options._catchError = function(error, newVNode, oldVNode) {
 	oldCatchError(error, newVNode, oldVNode);
 };
 
+const oldDiffed = options.diffed;
+options.diffed = function(newVNode) {
+	if (newVNode._component) {
+		newVNode._component._isSuspended = false;
+	}
+	oldDiffed(newVNode);
+};
+
 function detachedClone(vnode) {
 	if (vnode) {
 		vnode = assign({}, vnode);
-		vnode._component = null;
+		if (vnode._component != null) {
+			vnode._component._isSuspended = true;
+			vnode._component = null;
+		}
 		vnode._children = vnode._children && vnode._children.map(detachedClone);
 	}
 	return vnode;
@@ -59,7 +70,6 @@ Suspense.prototype = new Component();
 Suspense.prototype._childDidSuspend = function(promise, suspendingComponent) {
 	/** @type {import('./internal').SuspenseComponent} */
 	const c = this;
-
 	if (c._suspenders == null) {
 		c._suspenders = [];
 	}
