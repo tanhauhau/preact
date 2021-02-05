@@ -9,7 +9,9 @@ import React, {
 	Component,
 	render,
 	memo,
-	useState
+	useState,
+	useReducer,
+	Fragment
 } from 'preact/compat';
 import { li, ol } from '../../../test/_util/dom';
 
@@ -229,6 +231,46 @@ describe('memo()', () => {
 
 		expect(scratch.innerHTML).to.equal(
 			`<ol><li>A</li><li>B</li><li class="selected">C</li><li>D</li></ol>`
+		);
+	});
+
+	it.only('should support render null initially', () => {
+		let showText, updateParent;
+		function Component() {
+			const [show, setShow] = useState(false);
+			showText = () => setShow(true);
+
+			if (!show) return null;
+
+			return <div>Component</div>;
+		}
+
+		const Memoized = memo(Component);
+
+		function Parent() {
+			const [_, setState] = useState({});
+			updateParent = () => setState({});
+
+			return (
+				<Fragment>
+					<div>Before</div>
+					<Memoized />
+					<div>After</div>
+				</Fragment>
+			);
+		}
+
+		render(<Parent />, scratch);
+		expect(scratch.innerHTML).to.equal(`<div>Before</div><div>After</div>`);
+
+		updateParent();
+		rerender();
+
+		showText();
+		rerender();
+
+		expect(scratch.innerHTML).to.equal(
+			`<div>Before</div><div>Component</div><div>After</div>`
 		);
 	});
 });
